@@ -16,12 +16,21 @@ if ! podman image exists "${IMAGE_NAME}"; then
     podman build -t "${IMAGE_NAME}" "${PROJECT_DIR}"
 fi
 
+# Pass environment file or CLOUDFLARE_API_TOKEN into container
+ENV_ARGS=()
+if [ -f "${PROJECT_DIR}/.env" ]; then
+    ENV_ARGS+=(--env-file "${PROJECT_DIR}/.env")
+elif [ -n "${CLOUDFLARE_API_TOKEN}" ]; then
+    ENV_ARGS+=(-e CLOUDFLARE_API_TOKEN="${CLOUDFLARE_API_TOKEN}")
+fi
+
 # Run container with interactive terminal, port forwarding, and directory mounts
 # :Z flag ensures correct SELinux volume labels if SELinux is active
 exec podman run -it --rm \
     --name coreutils-gnutests-tracker-dev \
     -p 8787:8787 \
     -p 5173:5173 \
+    "${ENV_ARGS[@]}" \
     -v "${PROJECT_DIR}:/app:Z" \
     -v "${COREUTILS_DIR}:/coreutils:ro,Z" \
     -w /app \
