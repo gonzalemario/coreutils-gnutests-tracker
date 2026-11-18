@@ -73,9 +73,11 @@ Options:
 
 When ready to host publicly on Cloudflare:
 
-1. **Log in to Cloudflare**:
+1. **Authentication**:
+   Ensure `CLOUDFLARE_API_TOKEN` is set in your `.env` file (loaded automatically by `./dev.sh`).
+   Verify with:
    ```bash
-   wrangler login
+   wrangler whoami
    ```
 
 2. **Create the Production D1 Database**:

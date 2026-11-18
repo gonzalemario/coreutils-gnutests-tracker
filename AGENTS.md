@@ -115,7 +115,9 @@ python3 scripts/export_gnu_results.py \
 
 ### Deploying to Cloudflare Free Tier
 ```bash
-wrangler login
+# Authentication: dev.sh automatically forwards CLOUDFLARE_API_TOKEN from .env into the container.
+# Verify authentication:
+wrangler whoami
 wrangler d1 create coreutils_tests
 # Update wrangler.toml with the returned database_id
 wrangler d1 execute coreutils_tests --remote --file=schema.sql
@@ -129,22 +131,26 @@ wrangler deploy
 1. **British English Spelling Standard:**
    - Always use British English spelling across all documentation, code comments, commit messages, and communications (e.g. *centralised*, *initialise*, *behaviour*, *colour*, *optimise*, *prioritise*, *analyse*).
 
-2. **D1 SQLite Limits & Batching:**
+2. **Cloudflare Headless Authentication:**
+   - Interactive `wrangler login` browser OAuth is not required inside the container.
+   - Headless authentication is pre-configured via `CLOUDFLARE_API_TOKEN` in `.env`, forwarded automatically into the container by `dev.sh`.
+
+3. **D1 SQLite Limits & Batching:**
    - D1 free tier has a maximum of 100,000 writes/day.
    - When executing batch inserts, always chunk inserts in groups of 50 to avoid SQLite parameter limit errors.
    - D1 does not support PostgreSQL `FULL OUTER JOIN`; in `/api/compare`, joins or set diffs must remain compatible with SQLite or be performed in JavaScript.
 
-3. **External Coreutils Repository Separation:**
+4. **External Coreutils Repository Separation:**
    - Remember that test execution scripts (`run-gnu-test.sh`), test logs (`.log`), and exclusion lists (`gnu-unfixable-tests.txt`, `ignore-intermittent.txt`) reside in `uutils/coreutils`. Do not create or expect them in the tracker repository root.
 
-4. **Unfixable Tests Logic:**
+5. **Unfixable Tests Logic:**
    - Adjusted Pass Rate must be computed as:
      $$\text{Adjusted Pass Rate} = \frac{\text{PASS}}{\text{Total} - \text{SKIP} - \text{UNFIXABLE}}$$
    - Always verify that `is_unfixable` is properly populated from `gnu-unfixable-tests.txt`.
 
-5. **Log Sanitisation:**
+6. **Log Sanitisation:**
    - Failure logs stored in `log_excerpt` must always have ANSI escape codes stripped using regex `\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])`.
 
-6. **Security & Secrets:**
+7. **Security & Secrets:**
    - Default dev secret: `local-dev-secret`.
    - Never commit production tokens to Git; production tokens are injected via `wrangler secret put INGEST_TOKEN`.
