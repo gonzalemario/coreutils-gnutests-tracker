@@ -1,0 +1,16 @@
+name = "coreutils-gnutests-tracker"
+main = "backend/src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Serve static frontend dashboard assets
+assets = { directory = "./frontend/public", binding = "ASSETS" }
+
+# Cloudflare D1 Database Binding
+[[d1_databases]]
+binding = "DB"
+database_name = "coreutils_tests"
+database_id = "local-d1-placeholder-id"
+
+# Environment variables
+[vars]
+INGEST_TOKEN = "local-dev-secret"

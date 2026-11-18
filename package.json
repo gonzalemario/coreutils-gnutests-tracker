@@ -1,0 +1,20 @@
+{
+  "name": "coreutils-gnutests-tracker",
+  "version": "1.0.0",
+  "description": "Central dashboard and tracking API for GNU coreutils tests",
+  "main": "backend/src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "db:init": "wrangler d1 execute DB --local --file=schema.sql",
+    "db:seed": "wrangler d1 execute DB --local --file=seed.sql",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": ["coreutils", "uutils", "gnu-tests", "cloudflare", "d1", "workers"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241112.0",
+    "typescript": "^5.6.3",
+    "wrangler": "^4.164.0"
+  }
+}

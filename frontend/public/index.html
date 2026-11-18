@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GNU Coreutils Test Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    pre code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Navbar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-2xl">🦀</span>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-tight">uutils / coreutils</h1>
+          <p class="text-xs text-slate-400">GNU Test Suite Central Dashboard</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <!-- Run Selector -->
+        <div class="flex items-center space-x-2">
+          <label for="run-select" class="text-xs text-slate-400 font-medium">Run:</label>
+          <select id="run-select" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="">Loading runs...</option>
+          </select>
+        </div>
+
+        <!-- Diff Modal Trigger -->
+        <button id="btn-open-diff" class="text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 rounded-lg font-medium text-slate-300 hover:text-white transition">
+          Compare Runs
+        </button>
+
+        <a href="https://github.com/uutils/coreutils" target="_blank" class="text-slate-400 hover:text-white transition">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 space-y-6 w-full">
+
+    <!-- Run Header Banner -->
+    <div id="run-banner" class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center space-x-2">
+          <span id="run-source-badge" class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">LOCAL</span>
+          <span id="run-branch" class="text-sm font-semibold text-white">main</span>
+          <span class="text-slate-500">•</span>
+          <span id="run-commit-sha" class="font-mono text-xs text-slate-300">-------</span>
+        </div>
+        <p id="run-commit-msg" class="text-xs text-slate-400 truncate max-w-xl">No run selected</p>
+      </div>
+      <div class="text-right">
+        <div id="run-pass-rate" class="text-2xl font-bold text-emerald-400">0.0%</div>
+        <div class="text-xs text-slate-400">Adjusted Passing Rate</div>
+      </div>
+    </div>
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-lg p-3 text-center">
+        <div class="text-xs text-slate-400 font-medium">Total Tests</div>
+        <div id="kpi-total" class="text-xl font-bold text-white mt-1">-</div>
+      </div>
+      <div class="bg-slate-800/60 border border-emerald-900/50 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-800 transition" onclick="filterByStatus('PASS')">
+        <div class="text-xs text-emerald-400 font-medium">Passed</div>
+        <div id="kpi-pass" class="text-xl font-bold text-emerald-400 mt-1">-</div>
+      </div>
+      <div class="bg-slate-800/60 border border-rose-900/50 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-800 transition" onclick="filterByStatus('FAIL')">
+        <div class="text-xs text-rose-400 font-medium">Failed</div>
+        <div id="kpi-fail" class="text-xl font-bold text-rose-400 mt-1">-</div>
+      </div>
+      <div class="bg-slate-800/60 border border-amber-900/50 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-800 transition" onclick="filterByStatus('SKIP')">
+        <div class="text-xs text-amber-400 font-medium">Skipped</div>
+        <div id="kpi-skip" class="text-xl font-bold text-amber-400 mt-1">-</div>
+      </div>
+      <div class="bg-slate-800/60 border border-purple-900/50 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-800 transition" onclick="filterByStatus('ERROR')">
+        <div class="text-xs text-purple-400 font-medium">Errors</div>
+        <div id="kpi-error" class="text-xl font-bold text-purple-400 mt-1">-</div>
+      </div>
+      <div class="bg-slate-800/60 border border-slate-700/80 rounded-lg p-3 text-center cursor-pointer hover:bg-slate-800 transition" onclick="filterUnfixableOnly()">
+        <div class="text-xs text-slate-400 font-medium">Unfixable (GNU)</div>
+        <div id="kpi-unfixable" class="text-xl font-bold text-slate-400 mt-1">-</div>
+      </div>
+    </div>
+
+    <!-- Per-Utility Matrix Section -->
+    <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <h2 class="text-sm font-semibold text-white">Per-Utility Progress</h2>
+          <span class="text-xs text-slate-400">(Click a utility to filter tests)</span>
+        </div>
+        <button id="btn-clear-util-filter" class="hidden text-xs text-blue-400 hover:text-blue-300 font-medium">
+          Clear Utility Filter
+        </button>
+      </div>
+
+      <div id="utilities-grid" class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1">
+        <div class="text-xs text-slate-500 py-2">Loading utilities...</div>
+      </div>
+    </div>
+
+    <!-- Test Explorer Table Section -->
+    <div class="bg-slate-800/60 border border-slate-700/80 rounded-xl overflow-hidden space-y-0">
+      
+      <!-- Toolbar -->
+      <div class="p-4 border-b border-slate-700/80 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Status Filter Tabs -->
+          <button class="status-tab px-3 py-1 text-xs font-semibold rounded-lg bg-blue-600 text-white" data-status="ALL">All</button>
+          <button class="status-tab px-3 py-1 text-xs font-medium rounded-lg bg-slate-800 text-rose-300 hover:bg-slate-700" data-status="FAIL,ERROR">Failing Only</button>
+          <button class="status-tab px-3 py-1 text-xs font-medium rounded-lg bg-slate-800 text-emerald-300 hover:bg-slate-700" data-status="PASS">Passed</button>
+          <button class="status-tab px-3 py-1 text-xs font-medium rounded-lg bg-slate-800 text-amber-300 hover:bg-slate-700" data-status="SKIP">Skipped</button>
+
+          <!-- Actionable Missing Toggle -->
+          <label class="flex items-center space-x-1.5 ml-3 cursor-pointer select-none">
+            <input type="checkbox" id="chk-hide-unfixable" checked class="rounded bg-slate-700 border-slate-600 text-blue-600 focus:ring-0">
+            <span class="text-xs text-slate-300 font-medium">Hide Unfixable</span>
+          </label>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative w-full sm:w-64">
+          <input type="text" id="test-search" placeholder="Search test name or util..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+      </div>
+
+      <!-- Test Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900/70 uppercase text-slate-400 font-semibold border-b border-slate-700/80">
+            <tr>
+              <th class="py-2.5 px-4 w-28">Status</th>
+              <th class="py-2.5 px-4 w-32">Utility</th>
+              <th class="py-2.5 px-4">Test Script</th>
+              <th class="py-2.5 px-4 w-32 text-center">Tags</th>
+              <th class="py-2.5 px-4 w-24 text-right">Details</th>
+            </tr>
+          </thead>
+          <tbody id="tests-tbody" class="divide-y divide-slate-700/50">
+            <tr>
+              <td colspan="5" class="py-8 text-center text-slate-500">Loading tests...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination / Count Footer -->
+      <div class="p-3 bg-slate-900/60 border-t border-slate-700/80 flex items-center justify-between text-xs text-slate-400">
+        <div id="test-count-label">Showing 0 tests</div>
+        <div class="flex items-center space-x-2">
+          <button id="btn-prev-page" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded disabled:opacity-40" disabled>Previous</button>
+          <span id="page-indicator">Page 1</span>
+          <button id="btn-next-page" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded disabled:opacity-40" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Diff Modal -->
+  <div id="diff-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-700 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">Compare Test Runs (Regressions & Fixes)</h3>
+        <button id="btn-close-diff" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-4 border-b border-slate-700 bg-slate-900/50 flex flex-wrap gap-4 items-center text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">Base Run (Reference):</label>
+          <select id="diff-base-select" class="bg-slate-800 border border-slate-700 text-slate-200 rounded px-2.5 py-1"></select>
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">Head Run (Current):</label>
+          <select id="diff-head-select" class="bg-slate-800 border border-slate-700 text-slate-200 rounded px-2.5 py-1"></select>
+        </div>
+        <div class="pt-4">
+          <button id="btn-run-diff" class="bg-blue-600 hover:bg-blue-500 text-white font-medium px-3 py-1 rounded">Compute Diff</button>
+        </div>
+      </div>
+
+      <div id="diff-results" class="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
+        <p class="text-slate-400 text-center py-6">Select runs above and click "Compute Diff".</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State management
+    const state = {
+      runs: [],
+      currentRunId: null,
+      selectedUtility: null,
+      statusFilter: 'ALL',
+      hideUnfixable: true,
+      searchQuery: '',
+      offset: 0,
+      limit: 100,
+      totalTests: 0,
+    };
+
+    // DOM Elements
+    const runSelect = document.getElementById('run-select');
+    const runBranch = document.getElementById('run-branch');
+    const runCommitSha = document.getElementById('run-commit-sha');
+    const runCommitMsg = document.getElementById('run-commit-msg');
+    const runSourceBadge = document.getElementById('run-source-badge');
+    const runPassRate = document.getElementById('run-pass-rate');
+
+    const kpiTotal = document.getElementById('kpi-total');
+    const kpiPass = document.getElementById('kpi-pass');
+    const kpiFail = document.getElementById('kpi-fail');
+    const kpiSkip = document.getElementById('kpi-skip');
+    const kpiError = document.getElementById('kpi-error');
+    const kpiUnfixable = document.getElementById('kpi-unfixable');
+
+    const utilitiesGrid = document.getElementById('utilities-grid');
+    const btnClearUtil = document.getElementById('btn-clear-util-filter');
+    const testsTbody = document.getElementById('tests-tbody');
+    const testCountLabel = document.getElementById('test-count-label');
+    const testSearch = document.getElementById('test-search');
+    const chkHideUnfixable = document.getElementById('chk-hide-unfixable');
+
+    // Load Initial Runs
+    async function init() {
+      try {
+        const res = await fetch('/api/runs');
+        const data = await res.json();
+        state.runs = data.runs || [];
+
+        if (state.runs.length === 0) {
+          testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No test runs recorded yet. Run tests and ingest results using scripts/export_gnu_results.py!</td></tr>';
+          return;
+        }
+
+        // Populate dropdown
+        runSelect.innerHTML = state.runs.map(r => {
+          const dateStr = new Date(r.created_at).toLocaleString();
+          return `<option value="${r.id}">${r.commit_sha.substring(0, 7)} (${r.branch}) - ${dateStr}</option>`;
+        }).join('');
+
+        state.currentRunId = state.runs[0].id;
+        runSelect.value = state.currentRunId;
+
+        setupEventListeners();
+        loadRunData(state.currentRunId);
+      } catch (err) {
+        console.error('Failed to load runs:', err);
+        testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-rose-400">Error connecting to Worker API. Is Wrangler dev running?</td></tr>';
+      }
+    }
+
+    async function loadRunData(runId) {
+      const run = state.runs.find(r => r.id === runId);
+      if (!run) return;
+
+      // Update Header & KPIs
+      runBranch.textContent = run.branch;
+      runCommitSha.textContent = run.commit_sha.substring(0, 10);
+      runCommitMsg.textContent = run.commit_msg || 'No commit message';
+      runSourceBadge.textContent = run.trigger_source.toUpperCase();
+
+      const actionableTotal = run.total_tests - run.unfixable_count;
+      const passRate = actionableTotal > 0 ? ((run.pass_count / actionableTotal) * 100).toFixed(1) : 0;
+      runPassRate.textContent = `${passRate}%`;
+
+      kpiTotal.textContent = run.total_tests;
+      kpiPass.textContent = run.pass_count;
+      kpiFail.textContent = run.fail_count;
+      kpiSkip.textContent = run.skip_count;
+      kpiError.textContent = run.error_count;
+      kpiUnfixable.textContent = run.unfixable_count;
+
+      // Load utilities and tests in parallel
+      loadUtilities(runId);
+      loadTests(runId);
+    }
+
+    async function loadUtilities(runId) {
+      try {
+        const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/utilities`);
+        const data = await res.json();
+        const utils = data.utilities || [];
+
+        utilitiesGrid.innerHTML = utils.map(u => {
+          const isSelected = state.selectedUtility === u.utility;
+          const pct = u.total > 0 ? Math.round((u.pass / u.total) * 100) : 0;
+          const bg = isSelected ? 'bg-blue-600 text-white border-blue-500' : 'bg-slate-900/80 hover:bg-slate-700/80 text-slate-300 border-slate-700';
+          const failBadge = (u.fail + u.error) > 0 ? `<span class="bg-rose-500/20 text-rose-400 font-semibold px-1 rounded">${u.fail + u.error}</span>` : '';
+
+          return `
+            <button onclick="filterByUtility('${u.utility}')" class="px-2.5 py-1 text-xs border rounded-lg flex items-center space-x-1.5 transition ${bg}">
+              <span class="font-medium">${u.utility}</span>
+              <span class="text-[10px] text-slate-400">${pct}%</span>
+              ${failBadge}
+            </button>
+          `;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load utilities:', e);
+      }
+    }
+
+    async function loadTests(runId) {
+      testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-500">Loading tests...</td></tr>';
+
+      const params = new URLSearchParams({
+        limit: state.limit.toString(),
+        offset: state.offset.toString(),
+      });
+
+      if (state.selectedUtility) params.append('utility', state.selectedUtility);
+      if (state.statusFilter !== 'ALL') params.append('status', state.statusFilter);
+      if (state.hideUnfixable) params.append('unfixable', '0');
+      if (state.searchQuery) params.append('search', state.searchQuery);
+
+      try {
+        const res = await fetch(`/api/runs/${encodeURIComponent(runId)}/tests?${params.toString()}`);
+        const data = await res.json();
+        const tests = data.tests || [];
+        state.totalTests = data.total || 0;
+
+        testCountLabel.textContent = `Showing ${tests.length} of ${state.totalTests} tests`;
+        document.getElementById('page-indicator').textContent = `Page ${Math.floor(state.offset / state.limit) + 1}`;
+        document.getElementById('btn-prev-page').disabled = state.offset === 0;
+        document.getElementById('btn-next-page').disabled = state.offset + state.limit >= state.totalTests;
+
+        if (tests.length === 0) {
+          testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No matching tests found.</td></tr>';
+          return;
+        }
+
+        testsTbody.innerHTML = tests.map(t => {
+          let badge = '';
+          if (t.status === 'PASS') badge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">PASS</span>';
+          else if (t.status === 'FAIL') badge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-800">FAIL</span>';
+          else if (t.status === 'ERROR') badge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-950 text-purple-400 border border-purple-800">ERROR</span>';
+          else if (t.status === 'SKIP') badge = '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-800">SKIP</span>';
+
+          let tags = '';
+          if (t.is_unfixable) tags += '<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-700 text-slate-300">Unfixable</span> ';
+          if (t.is_intermittent) tags += '<span class="px-1.5 py-0.5 rounded text-[10px] bg-orange-950 text-orange-400 border border-orange-800">Flaky</span> ';
+
+          const hasLog = Boolean(t.log_excerpt);
+          const expandBtn = hasLog ? `<button onclick="toggleLog(${t.id})" class="text-blue-400 hover:text-blue-300 font-medium text-[11px]">View Log</button>` : '';
+
+          let logRow = '';
+          if (hasLog) {
+            logRow = `
+              <tr id="log-${t.id}" class="hidden bg-slate-950/80">
+                <td colspan="5" class="p-4 border-t border-slate-800">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-rose-400">Failure Log Excerpt (tests/${t.utility}/${t.test_name}):</span>
+                    <button onclick="navigator.clipboard.writeText(document.getElementById('raw-log-${t.id}').innerText)" class="text-[11px] text-slate-400 hover:text-white px-2 py-0.5 bg-slate-800 rounded">Copy</button>
+                  </div>
+                  <pre class="bg-black/60 p-3 rounded-lg overflow-x-auto text-[11px] text-slate-300 max-h-80"><code id="raw-log-${t.id}">${escapeHtml(t.log_excerpt)}</code></pre>
+                </td>
+              </tr>
+            `;
+          }
+
+          return `
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-2.5 px-4">${badge}</td>
+              <td class="py-2.5 px-4 font-semibold text-slate-200">${t.utility}</td>
+              <td class="py-2.5 px-4 font-mono text-slate-300">${t.test_name}</td>
+              <td class="py-2.5 px-4 text-center">${tags}</td>
+              <td class="py-2.5 px-4 text-right">${expandBtn}</td>
+            </tr>
+            ${logRow}
+          `;
+        }).join('');
+      } catch (err) {
+        console.error('Failed to load tests:', err);
+      }
+    }
+
+    function toggleLog(id) {
+      const row = document.getElementById(`log-${id}`);
+      if (row) row.classList.toggle('hidden');
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function filterByUtility(util) {
+      state.selectedUtility = state.selectedUtility === util ? null : util;
+      state.offset = 0;
+      btnClearUtil.classList.toggle('hidden', !state.selectedUtility);
+      loadUtilities(state.currentRunId);
+      loadTests(state.currentRunId);
+    }
+
+    function filterByStatus(status) {
+      state.statusFilter = status;
+      state.offset = 0;
+      updateStatusTabUI();
+      loadTests(state.currentRunId);
+    }
+
+    function filterUnfixableOnly() {
+      state.hideUnfixable = false;
+      chkHideUnfixable.checked = false;
+      state.statusFilter = 'ALL';
+      state.offset = 0;
+      updateStatusTabUI();
+      loadTests(state.currentRunId);
+    }
+
+    function updateStatusTabUI() {
+      document.querySelectorAll('.status-tab').forEach(tab => {
+        if (tab.dataset.status === state.statusFilter) {
+          tab.classList.add('bg-blue-600', 'text-white');
+          tab.classList.remove('bg-slate-800');
+        } else {
+          tab.classList.remove('bg-blue-600', 'text-white');
+          tab.classList.add('bg-slate-800');
+        }
+      });
+    }
+
+    function setupEventListeners() {
+      runSelect.addEventListener('change', (e) => {
+        state.currentRunId = e.target.value;
+        state.offset = 0;
+        loadRunData(state.currentRunId);
+      });
+
+      btnClearUtil.addEventListener('click', () => {
+        state.selectedUtility = null;
+        btnClearUtil.classList.add('hidden');
+        loadUtilities(state.currentRunId);
+        loadTests(state.currentRunId);
+      });
+
+      document.querySelectorAll('.status-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          state.statusFilter = tab.dataset.status;
+          state.offset = 0;
+          updateStatusTabUI();
+          loadTests(state.currentRunId);
+        });
+      });
+
+      chkHideUnfixable.addEventListener('change', (e) => {
+        state.hideUnfixable = e.target.checked;
+        state.offset = 0;
+        loadTests(state.currentRunId);
+      });
+
+      let searchTimer;
+      testSearch.addEventListener('input', (e) => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          state.searchQuery = e.target.value.trim();
+          state.offset = 0;
+          loadTests(state.currentRunId);
+        }, 250);
+      });
+
+      document.getElementById('btn-prev-page').addEventListener('click', () => {
+        if (state.offset >= state.limit) {
+          state.offset -= state.limit;
+          loadTests(state.currentRunId);
+        }
+      });
+
+      document.getElementById('btn-next-page').addEventListener('click', () => {
+        if (state.offset + state.limit < state.totalTests) {
+          state.offset += state.limit;
+          loadTests(state.currentRunId);
+        }
+      });
+
+      // Diff Modal
+      const modal = document.getElementById('diff-modal');
+      const baseSelect = document.getElementById('diff-base-select');
+      const headSelect = document.getElementById('diff-head-select');
+
+      document.getElementById('btn-open-diff').addEventListener('click', () => {
+        const optionsHtml = state.runs.map(r => `<option value="${r.id}">${r.commit_sha.substring(0, 7)} (${r.branch}) - ${new Date(r.created_at).toLocaleDateString()}</option>`).join('');
+        baseSelect.innerHTML = optionsHtml;
+        headSelect.innerHTML = optionsHtml;
+        if (state.runs.length > 1) {
+          baseSelect.value = state.runs[1].id;
+          headSelect.value = state.runs[0].id;
+        }
+        modal.classList.remove('hidden');
+      });
+
+      document.getElementById('btn-close-diff').addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+
+      document.getElementById('btn-run-diff').addEventListener('click', async () => {
+        const base = baseSelect.value;
+        const head = headSelect.value;
+        const diffBox = document.getElementById('diff-results');
+        diffBox.innerHTML = '<p class="text-slate-400 text-center py-6">Computing diff...</p>';
+
+        try {
+          const res = await fetch(`/api/compare?base=${encodeURIComponent(base)}&head=${encodeURIComponent(head)}`);
+          const data = await res.json();
+          const { summary, regressions, fixes, newly_skipped } = data;
+
+          let html = `
+            <div class="grid grid-cols-3 gap-3 mb-4 text-center">
+              <div class="bg-rose-950/40 border border-rose-800 p-2 rounded">
+                <div class="text-rose-400 font-bold text-lg">${summary.regressions_count}</div>
+                <div class="text-[10px] text-slate-400 uppercase">Regressions</div>
+              </div>
+              <div class="bg-emerald-950/40 border border-emerald-800 p-2 rounded">
+                <div class="text-emerald-400 font-bold text-lg">${summary.fixes_count}</div>
+                <div class="text-[10px] text-slate-400 uppercase">New Fixes</div>
+              </div>
+              <div class="bg-amber-950/40 border border-amber-800 p-2 rounded">
+                <div class="text-amber-400 font-bold text-lg">${summary.newly_skipped_count}</div>
+                <div class="text-[10px] text-slate-400 uppercase">Newly Skipped</div>
+              </div>
+            </div>
+          `;
+
+          if (regressions.length > 0) {
+            html += '<h4 class="font-bold text-rose-400 mb-2">🔴 Regressions (Were Passing, Now Failing):</h4><div class="space-y-1 mb-4">';
+            regressions.forEach(r => {
+              html += `<div class="bg-slate-900 p-2 rounded border border-rose-950 font-mono text-xs text-rose-300"><strong>${r.utility}</strong> / ${r.test_name} (${r.before} ➔ ${r.after})</div>`;
+            });
+            html += '</div>';
+          }
+
+          if (fixes.length > 0) {
+            html += '<h4 class="font-bold text-emerald-400 mb-2">🟢 Fixes (Were Failing, Now Passing!):</h4><div class="space-y-1 mb-4">';
+            fixes.forEach(f => {
+              html += `<div class="bg-slate-900 p-2 rounded border border-emerald-950 font-mono text-xs text-emerald-300"><strong>${f.utility}</strong> / ${f.test_name} (${f.before} ➔ ${f.after})</div>`;
+            });
+            html += '</div>';
+          }
+
+          if (regressions.length === 0 && fixes.length === 0 && newly_skipped.length === 0) {
+            html += '<p class="text-slate-400 text-center py-4">No status differences between selected runs.</p>';
+          }
+
+          diffBox.innerHTML = html;
+        } catch (e) {
+          diffBox.innerHTML = '<p class="text-rose-400 text-center py-4">Failed to compute diff.</p>';
+        }
+      });
+    }
+
+    // Run on startup
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
