@@ -39,9 +39,23 @@
         </div>
       </div>
 
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-3">
+        <!-- OS Filter -->
+        <div class="flex items-center space-x-1.5">
+          <label for="os-select" class="text-xs text-slate-400 font-medium">OS:</label>
+          <select id="os-select" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="ALL">All OSes</option>
+            <option value="Linux">Linux</option>
+            <option value="FreeBSD">FreeBSD</option>
+            <option value="OpenBSD">OpenBSD</option>
+            <option value="Windows">Windows</option>
+            <option value="Android">Android</option>
+            <option value="macOS">macOS</option>
+          </select>
+        </div>
+
         <!-- Run Selector -->
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1.5">
           <label for="run-select" class="text-xs text-slate-400 font-medium">Run:</label>
           <select id="run-select" class="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
             <option value="">Loading runs...</option>
@@ -67,6 +81,7 @@
     <div id="run-banner" class="bg-slate-800/60 border border-slate-700/80 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
       <div class="space-y-1">
         <div class="flex items-center space-x-2">
+          <span id="run-os-badge" class="px-2 py-0.5 text-xs font-semibold rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">LINUX</span>
           <span id="run-source-badge" class="px-2 py-0.5 text-xs font-semibold rounded bg-blue-900/60 text-blue-300 border border-blue-700/50">LOCAL</span>
           <span id="run-branch" class="text-sm font-semibold text-white">main</span>
           <span class="text-slate-500">•</span>
@@ -217,6 +232,7 @@
       currentRunId: null,
       selectedUtility: null,
       statusFilter: 'ALL',
+      osFilter: 'ALL',
       hideUnfixable: true,
       searchQuery: '',
       offset: 0,
@@ -225,10 +241,12 @@
     };
 
     // DOM Elements
+    const osSelect = document.getElementById('os-select');
     const runSelect = document.getElementById('run-select');
     const runBranch = document.getElementById('run-branch');
     const runCommitSha = document.getElementById('run-commit-sha');
     const runCommitMsg = document.getElementById('run-commit-msg');
+    const runOsBadge = document.getElementById('run-os-badge');
     const runSourceBadge = document.getElementById('run-source-badge');
     const runPassRate = document.getElementById('run-pass-rate');
 
@@ -248,26 +266,35 @@
 
     // Load Initial Runs
     async function init() {
+      setupEventListeners();
+      await loadRuns();
+    }
+
+    async function loadRuns() {
       try {
-        const res = await fetch('/api/runs');
+        const url = state.osFilter && state.osFilter !== 'ALL'
+          ? `/api/runs?os=${encodeURIComponent(state.osFilter)}`
+          : '/api/runs';
+        const res = await fetch(url);
         const data = await res.json();
         state.runs = data.runs || [];
 
         if (state.runs.length === 0) {
-          testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No test runs recorded yet. Run tests and ingest results using scripts/export_gnu_results.py!</td></tr>';
+          runSelect.innerHTML = '<option value="">No runs found</option>';
+          testsTbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No test runs recorded yet for the selected OS.</td></tr>';
           return;
         }
 
-        // Populate dropdown
+        // Populate dropdown with OS tag
         runSelect.innerHTML = state.runs.map(r => {
           const dateStr = new Date(r.created_at).toLocaleString();
-          return `<option value="${r.id}">${r.commit_sha.substring(0, 7)} (${r.branch}) - ${dateStr}</option>`;
+          const osTag = r.runner_os || 'Linux';
+          return `<option value="${r.id}">[${osTag}] ${r.commit_sha.substring(0, 7)} (${r.branch}) - ${dateStr}</option>`;
         }).join('');
 
         state.currentRunId = state.runs[0].id;
         runSelect.value = state.currentRunId;
 
-        setupEventListeners();
         loadRunData(state.currentRunId);
       } catch (err) {
         console.error('Failed to load runs:', err);
@@ -283,6 +310,7 @@
       runBranch.textContent = run.branch;
       runCommitSha.textContent = run.commit_sha.substring(0, 10);
       runCommitMsg.textContent = run.commit_msg || 'No commit message';
+      runOsBadge.textContent = (run.runner_os || 'Linux').toUpperCase();
       runSourceBadge.textContent = run.trigger_source.toUpperCase();
 
       const actionableTotal = run.total_tests - run.unfixable_count;
@@ -446,6 +474,11 @@
     }
 
     function setupEventListeners() {
+      osSelect.addEventListener('change', (e) => {
+        state.osFilter = e.target.value;
+        loadRuns();
+      });
+
       runSelect.addEventListener('change', (e) => {
         state.currentRunId = e.target.value;
         state.offset = 0;
@@ -504,7 +537,7 @@
       const headSelect = document.getElementById('diff-head-select');
 
       document.getElementById('btn-open-diff').addEventListener('click', () => {
-        const optionsHtml = state.runs.map(r => `<option value="${r.id}">${r.commit_sha.substring(0, 7)} (${r.branch}) - ${new Date(r.created_at).toLocaleDateString()}</option>`).join('');
+        const optionsHtml = state.runs.map(r => `<option value="${r.id}">[${r.runner_os || 'Linux'}] ${r.commit_sha.substring(0, 7)} (${r.branch}) - ${new Date(r.created_at).toLocaleDateString()}</option>`).join('');
         baseSelect.innerHTML = optionsHtml;
         headSelect.innerHTML = optionsHtml;
         if (state.runs.length > 1) {

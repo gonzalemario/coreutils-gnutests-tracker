@@ -154,21 +154,31 @@ export default {
     // --- LIST RUNS ---
     if (url.pathname === "/api/runs" && request.method === "GET") {
       const branch = url.searchParams.get("branch");
-      const limit = parseInt(url.searchParams.get("limit") || "20", 10);
+      const os = url.searchParams.get("os");
+      const limit = parseInt(url.searchParams.get("limit") || "50", 10);
 
       let query = "SELECT * FROM runs";
+      const where: string[] = [];
       const params: any[] = [];
 
       if (branch) {
-        query += " WHERE branch = ?";
+        where.push("branch = ?");
         params.push(branch);
+      }
+      if (os && os.toUpperCase() !== "ALL") {
+        where.push("LOWER(runner_os) = LOWER(?)");
+        params.push(os);
+      }
+
+      if (where.length > 0) {
+        query += " WHERE " + where.join(" AND ");
       }
 
       query += " ORDER BY created_at DESC LIMIT ?";
       params.push(limit);
 
       const stmt = env.DB.prepare(query);
-      const { results } = await (params.length === 1 ? stmt.bind(params[0]) : stmt.bind(params[0], params[1])).all();
+      const { results } = await stmt.bind(...params).all();
 
       return jsonResponse({ runs: results });
     }
@@ -176,9 +186,19 @@ export default {
     // --- LATEST RUN ---
     if (url.pathname === "/api/runs/latest" && request.method === "GET") {
       const branch = url.searchParams.get("branch") || "main";
-      let result = await env.DB.prepare(
-        "SELECT * FROM runs WHERE branch = ? ORDER BY created_at DESC LIMIT 1"
-      ).bind(branch).first();
+      const os = url.searchParams.get("os");
+
+      let query = "SELECT * FROM runs WHERE branch = ?";
+      const params: any[] = [branch];
+
+      if (os && os.toUpperCase() !== "ALL") {
+        query += " AND LOWER(runner_os) = LOWER(?)";
+        params.push(os);
+      }
+
+      query += " ORDER BY created_at DESC LIMIT 1";
+
+      let result = await env.DB.prepare(query).bind(...params).first();
 
       if (!result) {
         // Fallback to any latest run

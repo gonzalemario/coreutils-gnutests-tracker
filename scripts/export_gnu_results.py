@@ -24,7 +24,33 @@ import urllib.request
 from pathlib import Path
 
 
-def get_git_info(repo_dir: str):
+def detect_os() -> str:
+    """Detect current operating system with support for Android, BSDs, Windows, etc."""
+    if os.environ.get("TARGET_OS"):
+        return os.environ.get("TARGET_OS")
+    if os.environ.get("ANDROID_ROOT") or os.path.exists("/system/build.prop"):
+        return "Android"
+    if os.environ.get("RUNNER_OS"):
+        val = os.environ.get("RUNNER_OS").strip()
+        if val.lower() == "macos":
+            return "macOS"
+        return val.capitalize()
+
+    plat = sys.platform.lower()
+    if plat.startswith("linux"):
+        return "Linux"
+    elif plat.startswith("freebsd"):
+        return "FreeBSD"
+    elif plat.startswith("openbsd"):
+        return "OpenBSD"
+    elif plat.startswith("netbsd"):
+        return "NetBSD"
+    elif plat.startswith("win32") or plat.startswith("cygwin") or plat.startswith("msys"):
+        return "Windows"
+    elif plat.startswith("darwin"):
+        return "macOS"
+    return "Linux"
+
     """Retrieve git metadata (commit, branch, message)."""
     def _run(cmd):
         try:
@@ -191,6 +217,7 @@ def main():
     parser.add_argument("--log-lines", type=int, default=75, help="Number of tail log lines to include for failed tests (default: 75)")
     parser.add_argument("--unfixable-file", help="Path to gnu-unfixable-tests.txt")
     parser.add_argument("--intermittent-file", help="Path to ignore-intermittent.txt")
+    parser.add_argument("--os", help="Target operating system (e.g. Linux, FreeBSD, OpenBSD, Windows, macOS, Android)")
     parser.add_argument("--source", choices=["local", "github_actions", "ci"], help="Explicitly specify trigger source")
     parser.add_argument("--output", "-o", help="Output file path to save payload JSON")
     parser.add_argument("--endpoint", help="Cloudflare Worker /api/ingest URL to upload results directly")
@@ -223,8 +250,9 @@ def main():
         intermittent_set=intermittent_set
     )
 
+    runner_os = args.os if args.os else detect_os()
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    run_id = f"run_{git_info['commit_sha'][:8]}_{int(datetime.datetime.now().timestamp())}"
+    run_id = f"run_{git_info['commit_sha'][:8]}_{runner_os.lower()}_{int(datetime.datetime.now().timestamp())}"
 
     payload = {
         "run": {
@@ -235,7 +263,7 @@ def main():
             "trigger_source": git_info["trigger_source"],
             "ci_run_id": git_info["ci_run_id"],
             "ci_run_url": git_info["ci_run_url"],
-            "runner_os": os.environ.get("RUNNER_OS", "Linux"),
+            "runner_os": runner_os,
             "total_tests": total,
             "pass_count": counts.get("PASS", 0),
             "fail_count": counts.get("FAIL", 0),
@@ -251,6 +279,7 @@ def main():
     print(" GNU Test Suite Results Summary")
     print("=" * 60)
     print(f" Commit:     {git_info['commit_sha'][:10]} ({git_info['branch']})")
+    print(f" OS:         {runner_os}")
     print(f" Source:     {git_info['trigger_source']}")
     print(f" Total:      {total}")
     print(f" PASS:       {counts.get('PASS', 0)} ({counts.get('PASS', 0) / max(1, total) * 100:.1f}%)")
