@@ -51,6 +51,8 @@ def detect_os() -> str:
         return "macOS"
     return "Linux"
 
+
+def get_git_info(repo_dir: str) -> dict:
     """Retrieve git metadata (commit, branch, message)."""
     def _run(cmd):
         try:
