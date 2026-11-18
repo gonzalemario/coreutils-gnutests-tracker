@@ -4,7 +4,7 @@
   "description": "Central dashboard and tracking API for GNU coreutils tests",
   "main": "backend/src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --ip 0.0.0.0 --port 8787",
     "db:init": "wrangler d1 execute DB --local --file=schema.sql",
     "db:seed": "wrangler d1 execute DB --local --file=seed.sql",
     "deploy": "wrangler deploy"
