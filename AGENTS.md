@@ -59,7 +59,7 @@ The schema in `schema.sql` manages two primary tables:
 
 1. **`runs`**:
    - `id`: Unique run identifier (e.g. `run_<sha8>_<os>_<timestamp>`).
-   - `commit_sha`, `commit_msg`, `branch`, `trigger_source` (`local`, `github_actions`, `manual`).
+   - `commit_sha`, `commit_msg`, `branch`, `trigger_source` (`local`, `ci`).
    - `runner_os`: Target OS (`Linux`, `FreeBSD`, `OpenBSD`, `Windows`, `macOS`, `Android`).
    - `pass_count`, `fail_count`, `skip_count`, `error_count`, `unfixable_count`, `total_tests`.
    - `ci_run_id`, `ci_run_url`.

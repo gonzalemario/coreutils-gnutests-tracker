@@ -69,7 +69,7 @@ def get_git_info(repo_dir: str) -> dict:
     ci_repository = os.environ.get("GITHUB_REPOSITORY", "uutils/coreutils")
     ci_run_url = f"{ci_server_url}/{ci_repository}/actions/runs/{ci_run_id}" if ci_run_id else ""
 
-    trigger_source = "github_actions" if os.environ.get("CI") else "local"
+    trigger_source = "ci" if os.environ.get("CI") else "local"
 
     return {
         "commit_sha": commit_sha,
@@ -220,7 +220,7 @@ def main():
     parser.add_argument("--unfixable-file", help="Path to gnu-unfixable-tests.txt")
     parser.add_argument("--intermittent-file", help="Path to ignore-intermittent.txt")
     parser.add_argument("--os", help="Target operating system (e.g. Linux, FreeBSD, OpenBSD, Windows, macOS, Android)")
-    parser.add_argument("--source", choices=["local", "github_actions", "ci"], help="Explicitly specify trigger source")
+    parser.add_argument("--source", choices=["local", "ci"], help="Explicitly specify trigger source ('local' or 'ci')")
     parser.add_argument("--output", "-o", help="Output file path to save payload JSON")
     parser.add_argument("--endpoint", help="Cloudflare Worker /api/ingest URL to upload results directly")
     parser.add_argument("--token", help="Bearer authorization token for the Worker API")

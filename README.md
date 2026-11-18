@@ -63,7 +63,7 @@ python3 scripts/export_gnu_results.py \
 
 Options:
 - `--log-lines N`: Configurable number of failure log lines to include (default: 75).
-- `--source local`: Tag the run as local (or `github_actions` for CI).
+- `--source local`: Tag the run as local (or `ci` for CI).
 - `-o payload.json`: Save the structured JSON without uploading.
 - `--token SECRET`: Bearer token for authentication.
 

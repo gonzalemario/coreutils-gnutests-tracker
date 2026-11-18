@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS runs (
     commit_sha TEXT NOT NULL,                  -- Git commit hash
     commit_msg TEXT,                           -- First line of commit message
     branch TEXT NOT NULL DEFAULT 'main',       -- Branch name
-    trigger_source TEXT NOT NULL DEFAULT 'local', -- 'local', 'github_actions', 'manual'
+    trigger_source TEXT NOT NULL DEFAULT 'local', -- 'local', 'ci'
     ci_run_id TEXT,                            -- GitHub Actions run ID (if applicable)
     ci_run_url TEXT,                           -- Direct URL to CI run
     runner_os TEXT DEFAULT 'Linux',            -- OS environment
