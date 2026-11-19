@@ -11,10 +11,6 @@ binding = "DB"
 database_name = "coreutils_tests"
 database_id = "local-d1-placeholder-id"
 
-# Environment variables
-[vars]
-INGEST_TOKEN = "local-dev-secret"
-
 # Local Development Server Config (bind to all interfaces for container port forwarding)
 [dev]
 ip = "0.0.0.0"
