@@ -1,0 +1,104 @@
+name: GNU Tests — OpenBSD
+
+# Manual trigger only for now.
+# Future: add schedule: cron for nightly runs.
+on:
+  workflow_dispatch:
+    inputs:
+      log_lines:
+        description: "Number of failure log tail lines to capture per test"
+        required: false
+        default: "75"
+
+jobs:
+  gnu-tests-openbsd:
+    name: GNU Test Suite · OpenBSD (latest)
+    runs-on: ubuntu-latest
+    # OpenBSD VM via QEMU is slower than native; allow up to 2 hours.
+    # Adjust once we have a baseline from the first successful run.
+    timeout-minutes: 120
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Checkout this tracker repo (for scripts/export_gnu_results.py)  #
+      # ------------------------------------------------------------------ #
+      - name: Checkout tracker repo
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------ #
+      # 2. Clone uutils/coreutils (main) onto the runner workspace.        #
+      #    vmactions shares $GITHUB_WORKSPACE with the VM, so the clone    #
+      #    is visible inside OpenBSD at the same absolute path.            #
+      # ------------------------------------------------------------------ #
+      - name: Clone uutils/coreutils (main)
+        run: |
+          git clone --depth=1 https://github.com/uutils/coreutils.git coreutils-src
+
+      # ------------------------------------------------------------------ #
+      # 3. Boot OpenBSD VM and run the full GNU test suite.                #
+      #    - `prepare` runs once to install system packages.               #
+      #    - `run` executes inside the VM with the shared workspace.       #
+      # ------------------------------------------------------------------ #
+      - name: Run GNU tests inside OpenBSD VM
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg_add -x \
+              rust \
+              gmake \
+              autoconf-2.71 \
+              automake-1.16.5 \
+              gettext-tools \
+              gperf \
+              texinfo \
+              python3
+          run: |
+            set -e
+
+            COREUTILS_DIR="$GITHUB_WORKSPACE/coreutils-src"
+
+            echo "=== Fetching GNU coreutils test suite via uutils fetch-gnu.sh ==="
+            # fetch-gnu.sh clones, bootstraps, configures, and builds the GNU test suite
+            # at the expected location (../gnu relative to coreutils-src).
+            cd "$COREUTILS_DIR"
+            bash util/fetch-gnu.sh
+
+            echo "=== Building uutils/coreutils for OpenBSD ==="
+            cargo build --release --features unix
+
+            echo "=== Running GNU test suite ==="
+            # Allow partial failures — all results are captured and ingested below.
+            bash util/run-gnu-test.sh || true
+
+            echo "=== GNU test suite complete ==="
+
+      # ------------------------------------------------------------------ #
+      # 4. Upload raw test logs as a build artefact.                       #
+      #    This preserves the evidence even if the ingest step fails.      #
+      # ------------------------------------------------------------------ #
+      - name: Upload raw test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gnu-test-logs-openbsd
+          path: gnu/tests/**/*.log
+          retention-days: 7
+
+      # ------------------------------------------------------------------ #
+      # 5. Parse test logs and POST to the Cloudflare Worker API.          #
+      # ------------------------------------------------------------------ #
+      - name: Ingest results into tracker API
+        if: always()
+        env:
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          TRACKER_ENDPOINT: ${{ secrets.TRACKER_ENDPOINT }}
+        run: |
+          python3 scripts/export_gnu_results.py \
+            --test-dir gnu/tests \
+            --coreutils-dir coreutils-src \
+            --log-lines ${{ inputs.log_lines || 75 }} \
+            --os OpenBSD \
+            --source ci \
+            --endpoint "$TRACKER_ENDPOINT" \
+            --token "$INGEST_TOKEN"
