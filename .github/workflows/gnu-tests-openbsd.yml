@@ -47,12 +47,7 @@ jobs:
             pkg_add -x \
               rust \
               gmake \
-              autoconf-2.71 \
-              automake-1.16.5 \
-              gettext-tools \
-              gperf \
-              texinfo \
-              python3
+              python
           run: |
             set -e
 
@@ -92,7 +87,7 @@ jobs:
         if: always()
         env:
           INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
-          TRACKER_ENDPOINT: ${{ secrets.TRACKER_ENDPOINT }}
+          TRACKER_ENDPOINT: ${{ env.TRACKER_ENDPOINT }}
         run: |
           python3 scripts/export_gnu_results.py \
             --test-dir gnu/tests \
