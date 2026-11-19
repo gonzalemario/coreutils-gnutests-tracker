@@ -62,10 +62,10 @@ export default {
     // --- INGEST ENDPOINT ---
     if (url.pathname === "/api/ingest" && request.method === "POST") {
       const authHeader = request.headers.get("Authorization");
-      const expectedToken = env.INGEST_TOKEN || "local-dev-secret";
+      const expectedToken = env.INGEST_TOKEN;
 
-      if (expectedToken && authHeader !== `Bearer ${expectedToken}`) {
-        return jsonResponse({ error: "Unauthorized. Invalid token." }, 401);
+      if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+        return jsonResponse({ error: "Unauthorized. Ingestion token not configured or invalid." }, 401);
       }
 
       try {
